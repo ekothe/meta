@@ -7,22 +7,47 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(metafor)
 library(DT)
+library(knitr)
+library(RCurl)
+library(dplyr)
 
-dat<-read.csv("data.csv")
+## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
+script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
+eval(parse(text = script))
+
+# Set so that long lines in R will be wrapped:
+opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
 ```
 
+## Caluclate effect sizes for standarised mean differences
 
 ```{r}
-## Caluclate effect sizes for standarised mean differences
-dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean, sd2i=Control.SD, n2i=Control.N, data=dat)
-datatable(dat_ES)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)
+dat<-read.csv("data.csv")
 
+dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean, sd2i=Control.SD, n2i=Control.N, data=dat)
+```
+`r datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)`
 
 ## Run meta-analysis
+```{r}
 dat_MA<- rma(yi, vi, data=dat_ES, slab=Study.ID)
-dat_MA
 ```
+### Summary
+
+A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat_MA$method` estimator.
+
+```{r echo=FALSE}
+model<-tidy.rma(dat_MA)
+```
+`r kable(model, col.names=c("*g*", "se", "z", "*p*", "95% CI LB", "95% CI UB"), row.names=FALSE, digits = 3, caption="Effect Size")`
+
+```{r echo=FALSE}
+het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
+
+```
+
+`r kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")`
 
 ## Plots
 ```{r forest, echo=FALSE}
