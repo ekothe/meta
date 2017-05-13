@@ -33,7 +33,7 @@ data_import<-gs_read(key,
 ```
 ### Imported Data
 *This shows the data as entered into Google Sheets*
-`r datatable(data_import)`
+`r datatable(data_import, options = list(pageLength = 5))`
 
 
 ### Data for manual inspection
@@ -59,7 +59,7 @@ data_fuzzy<-data_cleaned %>% distinct(Study.ID, .keep_all = TRUE) ## Needed for 
 
 *This data has had exact duplicates removed.* **`r ifelse(nrow(data_fuzzy)==nrow(data_exact), "There don't appear to be duplicate entries after cleaning - looking good", "However, there are duplicate study entries with inconsistent data, manual data checking is required")`**
 
-`r datatable(data_exact)`
+`r datatable(data_exact, options = list(pageLength = 5))`
 
 
 ### Data for analysis
@@ -76,7 +76,7 @@ data_manually<- data_exact[!(data_exact$row.ID %in% rows_drop),]
 
 *Specificed rows (`r rows_drop`) have been discarded. This data should be ready to go*
 
-`r datatable(data_manually)`
+`r datatable(data_manually, options = list(pageLength = 5))`
 
 
 ```{r save}
