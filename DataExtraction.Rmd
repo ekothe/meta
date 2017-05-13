@@ -49,6 +49,8 @@ data_cleaned$Study.ID<-toupper(data_cleaned$Study.ID)
 data_exact<-data_cleaned %>% distinct(Study.ID, Intervention.Mean, Intervention.SD, Intervention.N, Control.Mean, Control.SD, Control.N, .keep_all = TRUE)
 data_exact<-data_exact %>% mutate(row.ID = row_number())
 
+data_exact <- data_exact[, c("row.ID", setdiff(names(data_exact), "row.ID"))]
+
 data_fuzzy<-data_cleaned %>% distinct(Study.ID, .keep_all = TRUE) ## Needed for the logic about inconsistent duplicates below
 ```
 
@@ -64,7 +66,7 @@ data_fuzzy<-data_cleaned %>% distinct(Study.ID, .keep_all = TRUE) ## Needed for 
 ## You can manually specify which row(s) to drop below. You should specify the row.IDs for the rows that you want to discard. If you don't wish to discard any rows keep rows_drop<-NULL
 
 rows_drop<-NULL
-rows_drop<-c(9,10)
+rows_drop<-c(2,3)
 
 data_manually<- data_exact[!(data_exact$row.ID %in% rows_drop),]
 
