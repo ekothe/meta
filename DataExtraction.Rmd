@@ -44,6 +44,10 @@ data_import<-gs_read(key,
 data_cleaned<-data_import
 names(data_cleaned) <- make.names(names(data_cleaned))
 data_cleaned$Study.ID<-toupper(data_cleaned$Study.ID)
+data_cleaned <- data_cleaned %>% arrange(.dots=c(data_cleaned$Study.ID))
+
+## Drop unnecessary attributes from working data file
+data_cleaned<-data_cleaned[,c("Study.ID", "Intervention.Mean", "Intervention.SD", "Intervention.N", "Control.Mean", "Control.SD", "Control.N")]
 
 ## Identify duplicate cases by removing exact mataching and keeping duplicate entries with inconsistent data
 data_exact<-data_cleaned %>% distinct(Study.ID, Intervention.Mean, Intervention.SD, Intervention.N, Control.Mean, Control.SD, Control.N, .keep_all = TRUE)
