@@ -4,64 +4,63 @@ output:
   html_document: default
 ---
 
-```{r include=FALSE}
+```{r setup, include=FALSE}
 ## Load required packages
-library("googlesheets")
-library("dplyr")
-library("knitr")
+library(googlesheets)
+library(dplyr)
+library(knitr)
+library(DT)
+library(readr)
 ```
-
 This script downloads data that has been extracted by coding teams during a data extraction activity. Minimal data cleaning is performed to allow for analysis.
 
 ### First let's get the most recent version of the data from Google Sheets
-
-```{r}
+```{r import, warning=FALSE}
 ## Import data from Google Sheets
-
 key<-gs_key("1HOnqlfCHHo8NAQFeh8EzIIUr56fYaMsb4DHigZafNig")
-data_import<-gs_read(key)
-
+data_import<-gs_read(key, 
+                     col_types = cols(
+                       `Study ID` = col_character(), 
+                        `Intervention Mean` = col_double(), 
+                            `Intervention N` = col_integer(),
+                            `Intervention SD` = col_double(),
+                            `Control Mean` = col_double(), 
+                            `Control N` = col_integer(),
+                            `Control SD` = col_double()
+                       )
+                     )
+                     
 ```
-
 ### Imported Data
 *This shows the data as entered into Google Sheets*
-`r kable(data_import)`
+`r datatable(data_import)`
 
 
 ### Data for manual inspection
 
-```{r warning=FALSE}
+```{r cleaning, warning=FALSE}
 ## Clean data and create standard column names
+
 data_cleaned<-data_import
-
-data_cleaned$Study.ID<-toupper(data_import$`Study ID`)
-data_cleaned$Intervention.Mean<-as.numeric(data_import$`Intervention Mean`)
-data_cleaned$Intervention.N<-as.numeric(data_import$`Intervention N`)
-data_cleaned$Intervention.SD<-as.numeric(data_import$`Intervention SD`)
-data_cleaned$Control.Mean<-as.numeric(data_import$`Control Mean`)
-data_cleaned$Control.N<-as.numeric(data_import$`Control N`)
-data_cleaned$Control.SD<-as.numeric(data_import$`Control SD`)
-data_cleaned<-data_cleaned %>% arrange(.dots=c(data_cleaned$Study.ID))
-
-## Drop unnecessary columns from working data file
-data_reduced<-data_cleaned[,c("Timestamp","Study.ID", "Intervention.Mean", "Intervention.SD", "Intervention.N", "Control.Mean", "Control.SD", "Control.N")]
+names(data_cleaned) <- make.names(names(data_cleaned))
+data_cleaned$Study.ID<-toupper(data_cleaned$Study.ID)
 
 ## Identify duplicate cases by removing exact mataching and keeping duplicate entries with inconsistent data
-data_exact<-data_reduced %>% distinct(Study.ID, Intervention.Mean, Intervention.SD, Intervention.N, Control.Mean, Control.SD, Control.N, .keep_all = TRUE)
+data_exact<-data_cleaned %>% distinct(Study.ID, Intervention.Mean, Intervention.SD, Intervention.N, Control.Mean, Control.SD, Control.N, .keep_all = TRUE)
 data_exact<-data_exact %>% mutate(row.ID = row_number())
 
-data_fuzzy<-data_reduced %>% distinct(Study.ID, .keep_all = TRUE)
+data_fuzzy<-data_cleaned %>% distinct(Study.ID, .keep_all = TRUE) ## Needed for the logic about inconsistent duplicates below
 ```
 
 
 *This data has had exact duplicates removed.* **`r ifelse(nrow(data_fuzzy)==nrow(data_exact), "There don't appear to be duplicate entries after cleaning - looking good", "However, there are duplicate study entries with inconsistent data, manual data checking is required")`**
 
-`r kable(data_exact)`
+`r datatable(data_exact)`
 
 
 ### Data for analysis
 
-```{r}
+```{r manual-clean}
 ## You can manually specify which row(s) to drop below. You should specify the row.IDs for the rows that you want to discard. If you don't wish to discard any rows keep rows_drop<-NULL
 
 rows_drop<-NULL
@@ -69,14 +68,15 @@ rows_drop<-c(9,10)
 
 data_manually<- data_exact[!(data_exact$row.ID %in% rows_drop),]
 
-data<-data_manually
 ```
 
 *Specificed rows (`r rows_drop`) have been discarded. This data should be ready to go*
 
-`r kable(data)`
+`r datatable(data_manually)`
 
-```{r}
+
+```{r save}
+data<-data_manually
 write.csv(data, "data.csv")
 ```
 
