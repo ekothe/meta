@@ -71,7 +71,7 @@ data_fuzzy<-data_cleaned %>% distinct(Study.ID, .keep_all = TRUE) ## Needed for 
 ## You can manually specify which row(s) to drop below. You should specify the row.IDs for the rows that you want to discard. If you don't wish to discard any rows keep rows_drop<-NULL
 
 rows_drop<-NULL
-rows_drop<-c(2,3)
+rows_drop<-c(9,10)
 
 data_manually<- data_exact[!(data_exact$row.ID %in% rows_drop),]
 
