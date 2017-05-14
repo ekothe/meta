@@ -10,6 +10,7 @@ library(DT)
 library(knitr)
 library(RCurl)
 library(dplyr)
+library(forestmodel)
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
 script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
@@ -50,10 +51,14 @@ het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", 
 `r kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")`
 
 ## Plots
-```{r forest, echo=FALSE}
-forest(dat_MA)
+###Forest plot
+```{r forest, warning=FALSE}
+p=forest_rma(dat_MA, study_labels=dat_ES$Study.ID,  format_options = list(colour = "black", shape = 15, text_size = 3, banded = FALSE))
+
+p
 ```
 
-```{r funnel, echo=FALSE}
-funnel(dat_MA)
+###Funnel plot
+```{r funnel}
+funnel(dat_MA, back="white")
 ```
