@@ -1,6 +1,8 @@
 ---
 title: "Light Weight Meta-Analysis Example"
-output: html_document
+output:
+  html_document:
+    code_folding: show
 ---
 
 ```{r setup, include=FALSE}
@@ -23,15 +25,18 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
 ## Caluclate effect sizes for standarised mean differences
 
-```{r}
+```{r calculate_ES}
 dat<-read.csv("data.csv")
 
 dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean, sd2i=Control.SD, n2i=Control.N, data=dat)
 ```
+
+
 `r datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)`
 
 ## Run meta-analysis
 ```{r}
+
 dat_MA<- rma(yi, vi, data=dat_ES, slab=Study.ID)
 ```
 ### Summary
@@ -53,8 +58,7 @@ het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", 
 ## Plots
 ###Forest plot
 ```{r forest, warning=FALSE}
-p=forest_rma(dat_MA, study_labels=dat_ES$Study.ID,  format_options = list(colour = "black", shape = 15, text_size = 3, banded = FALSE))
-
+p<-forest_rma(dat_MA, study_labels=dat_ES$Study.ID,  format_options = list(colour = "black", shape = 15, text_size = 3, banded = FALSE))
 p
 ```
 
