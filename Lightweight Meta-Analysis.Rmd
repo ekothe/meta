@@ -27,14 +27,23 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
 
 ```{r calculate_ES}
-dat<-read.csv("dat_ES.csv")
+#dat<-read.csv("data.csv") ## No exisiting effect sizes
+dat<-read.csv("dat_ES.csv") ## Effect size in columns vi and yi
 
 if(!"vi" %in% colnames(dat))
 {
   dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean,  sd2i=Control.SD, n2i=Control.N, data=dat)
   write.csv(dat_ES, "dat_ES.csv")
 } else {
-  dat_ES<-dat
+  dat_ES <- escalc(measure="SMD", m1i=yi, sd1i=vi, n1i=Intervention.N, m2i=yi,  sd2i=vi, n2i=Control.N, data=dat)
+  attrs <- attributes(dat_ES$yi)
+  dat_ES$vi<-dat$vi
+  dat_ES$yi<-dat$yi
+  attributes(dat_ES$yi) <- attrs
+  dat_ES$m1i<-NULL
+  dat_ES$m2i<-NULL
+  dat_ES$sd1i<-NULL
+  dat_ES$sd2i<-NULL
 }
 
 ```
