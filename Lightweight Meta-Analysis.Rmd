@@ -23,12 +23,13 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
 ```
 
+
 ## Caluclate effect sizes for standarised mean differences
 
 
 ```{r calculate_ES}
 #dat<-read.csv("data.csv") ## No exisiting effect sizes
-dat<-read.csv("dat_ES.csv") ## Effect size in columns vi and yi
+dat<-read.csv("data.csv") ## Effect size in columns vi and yi
 
 if(!"vi" %in% colnames(dat))
 {
@@ -64,16 +65,17 @@ model<-tidy.rma(dat_MA)
 ```{r echo=FALSE}
 het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
 
+fig<-het.small$k*0.5 ## set the fig height for the forest plot below based on the number of studies in the meta-analysis
 ```
 
 `r kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")`
 
 ## Plots
 ###Forest plot
-```{r forest, warning=FALSE}
+```{r forest, warning=FALSE, fig.height=fig}
 #forest(dat_MA)
 
-forest_rma(dat_MA, study_labels = dat_ES$Study.ID)
+forest_rma(dat_MA, study_labels = dat_ES$Study.ID, format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
 ```
 
 ###Funnel plot
