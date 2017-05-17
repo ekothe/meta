@@ -2,16 +2,23 @@
 title: "Verbose Meta-Analysis Example"
 output:
   html_document: default
+  pdf_document: default
+  word_document: default
+always_allow_html: yes
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
+bibliography: R-Pckgs.bib
+nocite: |
+  @*
 ---
 ## Setup details
 ```{r}
 Author <- "Your Name"
 Rev.Title <- "Review Title"
-filename.ES.Data<- "data_ostracism.csv"
+filename.ES.Data<- "data.csv"
 filename.PRISMA.Data<- "prisma.csv"
-X<- "Name of Outcome"
-Y <- "Name of Intervention (e.g. CBT)"
-Z <- "Name of Control (e.g. Waitlist)"
+X<- "Anxiety"
+Y <- "Exercise"
+Z <- "Waitlist Control"
 
 ```
 
@@ -24,7 +31,17 @@ library(knitr)
 library(RCurl)
 library(dplyr)
 library(forestmodel)
+library(rmarkdown)
 library(DiagrammeR)
+library(DiagrammeRsvg)
+library(magrittr)
+library(svglite)
+library(rsvg)
+library(png)
+
+
+output<-default_output_format(knitr::current_input()) ## This will fail if run manually. Don't worry!
+
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
 script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
@@ -36,6 +53,7 @@ source("prisma.R")
 # Set so that long lines in R will be wrapped:
 opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
+prisma.data <- read.csv(filename.PRISMA.Data)
 ```
 
 ```{r calculate_ES, include=FALSE}
@@ -44,7 +62,6 @@ dat<-read.csv(filename.ES.Data)
 if(!"vi" %in% colnames(dat))
 {
   dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean,  sd2i=Control.SD, n2i=Control.N, data=dat)
-  write.csv(dat_ES, "dat_ES.csv")
 } else {
   dat_ES<-dat
   attrs<-NULL
@@ -53,6 +70,9 @@ if(!"vi" %in% colnames(dat))
   attributes(dat_ES$yi) <- attrs
 }
 
+```
+
+```{r dat_es_html, eval=(output$name=="html_document"), echo=FALSE, warning=FALSE}
 datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)
 ```
 
@@ -62,7 +82,6 @@ model<-tidy.rma(dat_MA)
 het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
 eggers<-regtest(dat_MA)
 
-fig<-het.small$k*0.5 ## set the fig height for the forest plot below based on the number of studies in the meta-analysis
 ```
 
 ## Data analysis
@@ -71,45 +90,69 @@ This file documents the analyses conducted for `r Author` (`r (format(Sys.Date()
 
 A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat_MA$method` estimator. The effect size is the standarised mean difference (hedges g).
 
-## Results
-This review was reported according to the PRISMA statement. The flow of studies through the review is shown in the PRISMA Flowchart below (Figure 1).
+## Studies
+This review was reported according to the PRISMA statement. The flow of studies through the review is shown in the PRISMA Flowchart below (Figure 1). From the `r prisma.data$no_dupes` studies that underwent screening, a total of `r prisma.data$quantitative` were suitable for meta-analysis.
 
-```{r prisma, fig.cap="Figure 1. PRISMA Flowchart", echo=FALSE, warning=FALSE}
-prima.data <- read.csv(filename.PRISMA.Data)
 
-prisma(found = prima.data$found,
-        found_other = prima.data$found_other,
-        no_dupes = prima.data$no_dupes, 
-        screened = prima.data$screened, 
-        screen_exclusions = prima.data$screened_exclusions, 
-        full_text = prima.data$full_text,
-        full_text_exclusions = prima.data$full_text_exclusions, 
-        qualitative = prima.data$qualitative,
-        quantitative = prima.data$quantitative,
-        reasons = paste(prima.data$reasons))
+```{r prisma_png, fig.cap="Figure 1. PRISMA Flowchart", echo=FALSE, warning=FALSE, out.width="400px", message=FALSE, eval=(output$name!="html_document")}
+prisma_graph<-prisma(found = prisma.data$found,
+        found_other = prisma.data$found_other,
+        no_dupes = prisma.data$no_dupes, 
+        screened = prisma.data$screened, 
+        screen_exclusions = prisma.data$screened_exclusions, 
+        full_text = prisma.data$full_text,
+        full_text_exclusions = prisma.data$full_text_exclusions, 
+        qualitative = prisma.data$qualitative,
+        quantitative = prisma.data$quantitative,
+        reasons = paste(prisma.data$reasons))
 
+# Create a PNG of this graph
+export_svg(prisma_graph) %>% charToRaw %>% rsvg %>% png::writePNG('prisma_graph.png')
+
+knitr::include_graphics('graph2.png')
 ```
 
-###Results
+```{r prisma_html, fig.cap="Figure 1. PRISMA Flowchart", echo=FALSE, warning=FALSE, message=FALSE, eval=(output$name=="html_document")}
 
-```{r forest, echo=FALSE, warning=FALSE, fig.height=fig, fig.cap="Figure 2. Forest Plot"}
-forest_rma(dat_MA, study_labels = dat_ES$Study.ID, format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
+prisma(found = prisma.data$found,
+        found_other = prisma.data$found_other,
+        no_dupes = prisma.data$no_dupes, 
+        screened = prisma.data$screened, 
+        screen_exclusions = prisma.data$screened_exclusions, 
+        full_text = prisma.data$full_text,
+        full_text_exclusions = prisma.data$full_text_exclusions, 
+        qualitative = prisma.data$qualitative,
+        quantitative = prisma.data$quantitative,
+        reasons = paste(prisma.data$reasons))
 ```
 
-A random effects meta-analysis was conducted (k=`r het.small$k`) to explore the difference in `r X` between the `r Y` group and the `r Z` group. The average difference in `r X` was g=`r round(model$b,2)` (p=`r round(model$pval,3)`, 95% CI [`r round(model$ci.lb, 2)`, `r round(model$ci.ub, 2)`]).`r ifelse(model$pval > 0.05, "[^1]", "")` The results of this analysis are summarised in the tables below.
+## Meta-analysis results
 
-A Cochran's Q test was conducted to examine whether variations in the observed effect are likely to be attributable soley to sampling error (Q~(df=`r het.small$k-1`)~=`r round(het.small$QE,2)`, p=`r ifelse(het.small$QEp < 0.001, "<.001", "round(res$QEp,3)")`). `r ifelse(het.small$QEp < 0.05, "The variation in the effect is greater than would be expected from sampling error alone. It appears that the true effect varies betweeen studies.", "There is no evidence that the true effect size varies between studies.")` The I^2^ statistics indicates the proportion of variance in the observed effect attributable to sampling error. In this instance, the I^2^ = `r round(het.small$I2,2)`%.[^2]
+```{r forest, echo=FALSE, warning=FALSE, fig.height=het.small$k*0.5, fig.cap="Figure 2. Forest Plot"}
+forest_rma(dat_MA, study_labels = dat_ES$Study.ID, format_options = list(colour  = "black", shape = 15, text_size = 3, banded = TRUE))
+```
+
+A random effects meta-analysis was conducted (k=`r het.small$k`) to explore the difference in `r X` between the `r Y` group and the `r Z` group. As shown in Figure 2, the average difference in `r X` was g=`r round(model$b,2)` (p=`r round(model$pval,3)`, 95% CI [`r round(model$ci.lb, 2)`, `r round(model$ci.ub, 2)`]).`r ifelse(model$pval > 0.05, "[^1]", "")` The results of this analysis are summarised in the tables below.
+
+A Cochran's Q test was conducted to examine whether variations in the observed effect are likely to be attributable soley to sampling error (Q~(df=`r het.small$k-1`)~=`r round(het.small$QE,2)`, p=`r ifelse(het.small$QEp < 0.001, "<.001", round(het.small$QEp,3))`). `r ifelse(het.small$QEp < 0.05, "The variation in the effect is greater than would be expected from sampling error alone. It appears that the true effect varies betweeen studies.", "There is no evidence that the true effect size varies between studies.")` The I^2^ statistics indicates the proportion of variance in the observed effect attributable to sampling error. In this instance, the I^2^ = `r round(het.small$I2,2)`%.[^2]
 
 `r ifelse(model$pval > 0.05, "[^1]: It is important to note that a p>.05 indicates lack of evidence of an effect (i.e. uncertainty) rather than evidence of no effect unless confidence intervals are sufficently narrow to rule out a clinically meaningful effect.", "")` 
 
 [^2]: Note, this statistic is not an absolute measure of heterogeneity (although it is often interpreted as such). We strongly advise against using rules of thumb such as "small", "medium" or "large" when interpreting I^2^ values.
 
-`r kable(model, col.names=c("*g*", "se", "z", "*p*", "95% CI LB", "95% CI UB"), row.names=FALSE, digits = 3, caption="Effect Size")`
+`r kable(cbind(model, het.small), col.names=c("*g*", "se", "z", "*p*", "95% CI LB", "95% CI UB", "k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), row.names=FALSE, digits = 3, caption="Effect Size")`
 
-`r kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")`
+
 
 A funnel plot was generated to allow for visual inspection of funnel plot asymmetry that can indicate reporting biases (e.g. publication bias or outcome selection bias). `r ifelse(het.small$k < 10, "However, as per Sterne and Egger (2006), statisical tests for funnel plot asymettry are underpowered when the number of studies included in the analysis is 10 or fewer. As such, a formal test of funnel plot asymmetry was not conducted", paste0("An Egger's test was conducted to detect funnel plot asymmetry (z=", round(eggers$zval, 2), ",p=", round(eggers$pval,2)))`). 
 
+
 ```{r fig.cap="Figure 3. Funnel Plot", echo=FALSE}
 funnel<-funnel(dat_MA, back="white")
+```
+
+## Packages used in this document
+```{r include=FALSE}
+citPkgs <- names(sessionInfo()$otherPkgs)
+write_bib(citPkgs, file="R-Pckgs.bib")
 ```
