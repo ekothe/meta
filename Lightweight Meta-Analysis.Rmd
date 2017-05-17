@@ -1,10 +1,16 @@
 ---
 title: "Light Weight Meta-Analysis Example"
 output:
+  word_document: default
+  pdf_document: default
   html_document:
     code_folding: show
+always_allow_html: yes
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
+bibliography: R-Pckgs.bib
+nocite: |
+  @*
 ---
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(metafor)
@@ -13,6 +19,10 @@ library(knitr)
 library(RCurl)
 library(dplyr)
 library(forestmodel)
+library(rmarkdown)
+library(kableExtra)
+
+output<-default_output_format(knitr::current_input()) ## This will fail if run manually. Don't worry!
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
 script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
@@ -23,18 +33,15 @@ opts_chunk$set(tidy.opts=list(width.cutoff=80),tidy=TRUE)
 
 ```
 
+```{r read_data}
+dat<-read.csv("data.csv")
+```
 
 ## Caluclate effect sizes for standarised mean differences
-
-
 ```{r calculate_ES}
-#dat<-read.csv("data.csv") ## No exisiting effect sizes
-dat<-read.csv("data.csv") ## Effect size in columns vi and yi
-
 if(!"vi" %in% colnames(dat))
 {
   dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean,  sd2i=Control.SD, n2i=Control.N, data=dat)
-  write.csv(dat_ES, "dat_ES.csv")
 } else {
   dat_ES<-dat
   attrs<-NULL
@@ -45,40 +52,51 @@ if(!"vi" %in% colnames(dat))
 
 ```
 
+```{r dat_es_html, eval=(output$name=="html_document"), echo=FALSE, warning=FALSE}
+datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)
+```
 
-`r datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)`
+```{r dat_es_pdf,eval=(output$name=="pdf_document"), echo=FALSE, warning=FALSE}
+kable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), booktabs = T, format = "latex") %>%
+kable_styling(latex_options = c("striped", "scale_down"))
+
+```
+
+```{r dat_es_word,eval=(output$name=="word_document"), echo=FALSE, warning=FALSE}
+kable(dat_ES %>% select(-one_of(c("X", "Timestamp"))))
+```
+
+
 
 ## Run meta-analysis
-```{r}
+```{r run_MA}
 dat_MA<- rma(yi, vi, data=dat_ES, slab=Study.ID)
-
+model<-tidy.rma(dat_MA)
+het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
+eggers<-regtest(dat_MA)
 ```
 ### Summary
 
 A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat_MA$method` estimator.
 
-```{r echo=FALSE}
-model<-tidy.rma(dat_MA)
-```
 `r kable(model, col.names=c("*g*", "se", "z", "*p*", "95% CI LB", "95% CI UB"), row.names=FALSE, digits = 3, caption="Effect Size")`
-
-```{r echo=FALSE}
-het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
-
-fig<-het.small$k*0.5 ## set the fig height for the forest plot below based on the number of studies in the meta-analysis
-```
 
 `r kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")`
 
 ## Plots
 ###Forest plot
-```{r forest, warning=FALSE, fig.height=fig}
-#forest(dat_MA)
-
+```{r forest, warning=FALSE, fig.height=(het.small$k*0.5)}
 forest_rma(dat_MA, study_labels = dat_ES$Study.ID, format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
 ```
 
 ###Funnel plot
 ```{r funnel}
 funnel(dat_MA, back="white")
+
+```
+
+## Packages used in this document
+```{r include=FALSE}
+citPkgs <- names(sessionInfo()$otherPkgs)
+write_bib(citPkgs, file="R-Pckgs.bib")
 ```
