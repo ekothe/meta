@@ -1,0 +1,28 @@
+digraph mark{
+  subgraph cluster0{
+    graph[fillcolor="LightGrey", style=filled]
+    node[width=3, shape="box", style=filled, fillcolor=white]
+    
+    Literature -> Integration
+    Integration -> Argument
+    Data -> Analysis
+    Analysis -> Output
+    Argument -> Manuscript
+    Output -> Manuscript [style=dashed]
+    
+    Integration[shape=diamond]
+    Analysis[shape=diamond]
+    
+    
+    
+    subgraph cluster2{
+      graph[fillcolor=LightGrey, style=filled, label=<<I>In data analysis software</I>>]
+      Data; Analysis; Output
+    }
+    
+    subgraph cluster1{
+      graph[fillcolor=LightGrey, style=filled, label=<<I>In word</I>>]
+      Literature; Integration; Argument, Manuscript
+    }
+    
+  }}
