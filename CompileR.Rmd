@@ -1,10 +1,12 @@
 ---
 title: "CompileR"
-output: html_document
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
-bibliography: R-Pckgs.bib
 nocite: |
   @*
+output:
+  word_document: default
+  html_document: default
+bibliography: R-Pckgs.bib
 ---
 
 ```{r settings}
