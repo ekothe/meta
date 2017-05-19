@@ -1,0 +1,18 @@
+digraph mark{
+  subgraph cluster0{
+    graph[fillcolor=LightGrey, style=filled, label=<<I>Using Rmd in R</I>>]
+    node[width=3, shape="box", style=filled, fillcolor=white]
+    
+    node[x=2]
+    Data
+    
+    Literature -> Integration
+    Integration -> Argument
+    Data -> Analysis
+    Analysis -> Manuscript
+    Argument -> Manuscript
+    
+    Integration[shape=diamond]
+    Analysis[shape=diamond]
+
+  }}

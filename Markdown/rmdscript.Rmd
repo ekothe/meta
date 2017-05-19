@@ -1,0 +1,61 @@
+---
+title: "Markdown notebook demonstration"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook, one of multiple output types for RMD, including html, pdf, and (with some wrangling) word. When you execute code within the notebook, the results appear beneath the code. 
+
+This is a chunk, it contains code. But while this is important to the script, the reader doesn't need to see it so we can include it in this, but hide it from the published output.
+```{r Setup, echo=FALSE}
+set.seed(46131)
+library(tidyverse)
+library(psych)
+library(broom)
+```
+
+See that between chunks, I can just write like it's a word processor, but it encourages me to focus on text, rather than aesthetics. I can still do layout and formatting through tags, but it's not *WYSIWYG*.
+
+# Data Generation 
+
+This section contains my data generation, creating 100 observations of two independent, random, and normally-distributed variables (*a* and *b*). The means and SDs are different just to generate intrigue.
+
+```{r Generate some Random Data}
+observations <- tibble(
+  a = rnorm(100, 15, 3.5),
+  b = rnorm(100, 18, 2.8)
+  )
+```
+
+## Exploring the data
+
+Now I can report the full descriptives table. 
+
+```{r Describe the data, echo=FALSE}
+des <-  describe(observations)
+des
+```
+**Otherwise, I might alternatively report the key details in-line.** 
+
+There were `r des$n[1]` observations of a, with a mean of `r round(des$mean[1], 2)` and SD of `r round(des$sd[1], 2)`.  
+
+### Visualisation
+This is a scatterplot of a x b
+
+```{r Plot the correlation (using ggplot2), echo=FALSE}
+ggplot(observations, aes(a,b)) + geom_point() + theme_bw()
+```
+
+## Modelling the data
+
+This section contains a linear regression model of the form:
+
+$$ \hat a = \beta b + c + \epsilon $$
+```{r Estimate a model for these data, echo = FALSE, results=FALSE}
+model <-  lm(a~b, observations)
+#summary(model)
+glnce <- glance(model)
+```
+
+
+`r ifelse(glnce$p.value>0.05, 
+  paste("*b* was not a significant predictor of *a* (F(",glnce$df,", ",glnce$df.residual,") = ",round(glnce$statistic,2),", *p* = ",round(glnce$p.value, 2), ").", sep=""),   paste("*b* was a significant predictor of *a* (F(",glnce$df,", ",glnce$df.residual,") = ",round(glnce$statistic,2),", *p* = ", round(glnce$p.value,2), ").",sep=""))`

@@ -33,18 +33,24 @@ library(knitr)
 ## First we make ourselves an incomplete dataset to work with [^1]
 ```{r}
 dat_comp$X <- NULL
+
 dat_comp$dval <- with(dat_comp,
-                          (Intervention.Mean - Control.Mean) / sqrt(((Intervention.N-1)*Intervention.SD^2 + (Control.N-1)*Control.SD^2)/(Intervention.N + Control.N - 2)))
+                          (Intervention.Mean - Control.Mean) / sqrt(((Intervention.N-1)*Intervention.SD^2 +
+                                                                       (Control.N-1)*Control.SD^2)/(Intervention.N + Control.N - 2)))
+
 dat_comp$tval <- with(dat_comp, 
                         dval / sqrt(1/Intervention.N + 1/Control.N))
+
 dat_comp$pval <- 2 * with(dat_comp, 
                             pt(abs(tval), 
                             df = Intervention.N + Control.N - 2, 
                             lower.tail=FALSE))
+
 dat_comp$sign <- with(dat_comp, 
                            ifelse(Intervention.Mean > Control.Mean, 
                                       1, 
                                       -1))
+
 dat_comp[,c("dval","tval","pval")] <- round(dat_comp[,c("dval","tval","pval")], 2)
 dat_comp[c(1,7),c("Intervention.Mean","Intervention.SD","Control.Mean","Control.SD","tval","pval","sign")] <- NA
 dat_comp[c(5,8),c("Intervention.Mean","Intervention.SD","Control.Mean","Control.SD", "dval","pval","sign")] <- NA
@@ -77,19 +83,25 @@ dat_comp$tval <- replmiss(dat_comp$tval, with(dat_comp, sign * qt(pval/2, df=Int
 
 ## Try and calculate d-values from available t-values
 ```{r}
-dat_comp$dval <- replmiss(dat_comp$dval, with(dat_comp, tval * sqrt(1/Intervention.N + 1/Control.N)))
+dat_comp$dval <- replmiss(dat_comp$dval, 
+                          with(dat_comp, 
+                               tval * sqrt(1/Intervention.N + 1/Control.N)))
 ```
 `r kable(dat_comp)`
 
 ### Convert from Cohen's d to hedges g
 ```{r}
-dat_comp$yi <- replmiss(dat_comp$yi, with(dat_comp, (1 - 3/(4*(Intervention.N+Control.N-2) - 1)) * dval))
+dat_comp$yi <- replmiss(dat_comp$yi, 
+                        with(dat_comp, 
+                             (1 - 3/(4*(Intervention.N+Control.N-2) - 1)) * dval))
 ```
 `r kable(dat_comp)`
 
 ### Calculate missing sampling variances
 ```{r}
-dat_comp$vi <- replmiss(dat_comp$vi, with(dat_comp, 1/Intervention.N+ 1/Control.N + yi^2/(2*(Intervention.N+Control.N))))
+dat_comp$vi <- replmiss(dat_comp$vi, 
+                        with(dat_comp, 
+                             1/Intervention.N+ 1/Control.N + yi^2/(2*(Intervention.N+Control.N))))
 ```
 `r kable(dat_comp)`
 
