@@ -1,0 +1,21 @@
+install.packages(c("metafor",
+  "knitr",
+  "rmarkdown",
+  "googlesheets",
+  "dplyr",
+  "readr",
+  "DT",
+  "Matrix",
+  "bitops",
+  "forestmodel",
+  "RCurl",
+  "ggplot2",
+  "kableExtra",
+  "magrittr",
+  "DiagrammeRsvg",
+  "rsvg",
+  "DiagrammeR",
+  "png",
+  "svglite"))
+
+
