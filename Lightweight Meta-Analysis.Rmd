@@ -106,7 +106,7 @@ A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat
 ###Forest plot
 ```{r forest, warning = FALSE, fig.height = (het.small$k*0.5)}
 forest_rma(dat_MA, 
-           study_labels = dat_ES$Study.ID, 
+           study_labels = attr(dat_MA$yi, "slab"),
            format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
 ```
 
