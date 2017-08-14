@@ -34,7 +34,7 @@ opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
 ```
 
 ```{r read_data}
-dat <- read.csv("data.csv")
+dat <- read.csv("data_ostracism.csv")
 ```
 
 ## Caluclate effect sizes for standarised mean differences
