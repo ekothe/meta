@@ -39,7 +39,7 @@ measure <- "SMD"
 method <- "REML"
 
 
-## ----setup --------------------------------------------------------------
+## ----setup, include=FALSE------------------------------------------------
 library(metafor)
 library(DT)
 library(knitr)
@@ -48,13 +48,15 @@ library(dplyr)
 library(forestmodel)
 library(rmarkdown)
 
-## This downloads and runs the metafor_tidiers functions that implement broom type tidy data functions for rma objects
+## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
 eval(parse(text = (getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE))))
+
+
 
 
 ## ----read_data-----------------------------------------------------------
 dat <- read.csv(filename, stringsAsFactors = FALSE)
-dat
+
 ## ----calculate_ES--------------------------------------------------------
   dat_ES <-
     escalc(
@@ -67,16 +69,32 @@ dat
     n2i = get(col.cont.ns),  
     data = dat
     )
+
+## ----dat_es--------------------------------------------------------------
 dat_ES
 
-## ----Run the meta-analysis-----------------------------------------------
 
+## ----run_MA--------------------------------------------------------------
 dat_MA <- rma(yi, vi, data = dat_ES, slab = get(col.study.id), method=method)
 dat_MA
 
-## ----forest
-forest(dat_MA)
+## ----convenience, echo=FALSE---------------------------------------------
+##These are some convenience functions that help put things into tables for easier interpretation.
+
+model <- tidy.rma(dat_MA)
+
+het.small <- glance.rma(dat_MA) %>% 
+  select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
+
+
+## ----summary_table, echo=FALSE-------------------------------------------
+model
+## ----het_table, eval=dat_MA$method!="FE", echo=FALSE---------------------
+het.small
+## ----forest, warning = FALSE, fig.height = (het.small$k*0.5)-------------
+forest_rma(dat_MA, 
+           study_labels = attr(dat_MA$yi, "slab"),
+           format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
 
 ## ----funnel--------------------------------------------------------------
-funnel(dat_MA)
-
+funnel(dat_MA, back="white")
