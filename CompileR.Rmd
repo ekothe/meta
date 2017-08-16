@@ -4,17 +4,33 @@ csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa
 nocite: |
   @*
 output:
-  word_document: default
   html_document: default
+  word_document: default
 bibliography: R-Pckgs.bib
 ---
 
 ```{r settings}
-dat_comp <- read.csv("data.csv")
+## Specify the file containing your data
+dat_comp <- read.csv("missing_data.csv")
+
+
+### Specify the columns containing the means, SDs, and Ns for intervention and control within the file
+
+col.int.means     <- "m1"
+col.int.sds       <- "sd1"
+col.int.ns        <- "n1"
+col.cont.means    <- "m2"
+col.cont.sds      <- "sd2"
+col.cont.ns       <- "n2"
+
+col.dval <- "dval"
+col.tval <-"tval"
+col.pval <- "pval"
+col.sign <- "sign"
+
 ```
 
 ```{r setup, include=FALSE}
-library(metafor)
 library(knitr)
 knitr::opts_chunk$set(echo = TRUE)
 # Set so that long lines in R will be wrapped:
@@ -32,34 +48,7 @@ library(metafor)
 library(knitr)
 ```
 
-## First we make ourselves an incomplete dataset to work with [^1]
-```{r}
-dat_comp$X <- NULL
-
-dat_comp$dval <- with(dat_comp,
-                          (Intervention.Mean - Control.Mean) / sqrt(((Intervention.N-1)*Intervention.SD^2 +
-                                                                       (Control.N-1)*Control.SD^2)/(Intervention.N + Control.N - 2)))
-
-dat_comp$tval <- with(dat_comp, 
-                        dval / sqrt(1/Intervention.N + 1/Control.N))
-
-dat_comp$pval <- 2 * with(dat_comp, 
-                            pt(abs(tval), 
-                            df = Intervention.N + Control.N - 2, 
-                            lower.tail=FALSE))
-
-dat_comp$sign <- with(dat_comp, 
-                           ifelse(Intervention.Mean > Control.Mean, 
-                                      1, 
-                                      -1))
-
-dat_comp[,c("dval","tval","pval")] <- round(dat_comp[,c("dval","tval","pval")], 2)
-dat_comp[c(1,7),c("Intervention.Mean","Intervention.SD","Control.Mean","Control.SD","tval","pval","sign")] <- NA
-dat_comp[c(5,8),c("Intervention.Mean","Intervention.SD","Control.Mean","Control.SD", "dval","pval","sign")] <- NA
-dat_comp[c(2),c("Intervention.Mean","Intervention.SD","Control.Mean","Control.SD", "dval","pval")]    <- NA
-dat_comp[c(3,4,6),c("dval", "pval", "tval", "sign")] <- NA
-```
-
+## Show dat_comp
 `r kable(dat_comp)`
 
 ## Let's compile!
@@ -67,19 +56,29 @@ dat_comp[c(3,4,6),c("dval", "pval", "tval", "sign")] <- NA
 ### Start by calculating what we can
 ```{r}
 dat_comp <- escalc(measure="SMD", 
-                        m1i=Intervention.Mean, 
-                        sd1i=Intervention.SD, 
-                        n1i=Intervention.N, 
-                        m2i=Control.Mean,  
-                        sd2i=Control.SD, 
-                        n2i=Control.N, 
+                        m1i = get(col.int.means),
+                        sd1i = get(col.int.sds),  
+                        n1i = get(col.int.ns),  
+                        m2i = get(col.cont.means),
+                        sd2i = get(col.cont.sds),  
+                        n2i = get(col.cont.ns),  
                         data=dat_comp)
+
 ```
 `r kable(dat_comp)`
 
-### Try and calculate t-values from available exact p-values [^2]
+###This is our starting meta-analysis based on complete cases
 ```{r}
-dat_comp$tval <- replmiss(dat_comp$tval, with(dat_comp, sign * qt(pval/2, df=Intervention.N+Control.N-2, lower.tail=FALSE)))
+dat_MA <- rma(yi, vi, data = dat_comp)
+dat_MA
+forest(dat_MA)
+```
+
+
+
+### Try and calculate t-values from available exact p-values [^1]
+```{r}
+dat_comp$tval <- replmiss(dat_comp$tval, with(dat_comp, sign * qt(pval/2, df=get(col.int.ns)+get(col.cont.ns)-2, lower.tail=FALSE)))
 ```
 `r kable(dat_comp)`
 
@@ -87,7 +86,7 @@ dat_comp$tval <- replmiss(dat_comp$tval, with(dat_comp, sign * qt(pval/2, df=Int
 ```{r}
 dat_comp$dval <- replmiss(dat_comp$dval, 
                           with(dat_comp, 
-                               tval * sqrt(1/Intervention.N + 1/Control.N)))
+                               tval * sqrt(1/get(col.int.ns) + 1/get(col.cont.ns))))
 ```
 `r kable(dat_comp)`
 
@@ -95,7 +94,7 @@ dat_comp$dval <- replmiss(dat_comp$dval,
 ```{r}
 dat_comp$yi <- replmiss(dat_comp$yi, 
                         with(dat_comp, 
-                             (1 - 3/(4*(Intervention.N+Control.N-2) - 1)) * dval))
+                             (1 - 3/(4*(get(col.int.ns)+get(col.cont.ns)-2) - 1)) * dval))
 ```
 `r kable(dat_comp)`
 
@@ -103,17 +102,26 @@ dat_comp$yi <- replmiss(dat_comp$yi,
 ```{r}
 dat_comp$vi <- replmiss(dat_comp$vi, 
                         with(dat_comp, 
-                             1/Intervention.N+ 1/Control.N + yi^2/(2*(Intervention.N+Control.N))))
+                             1/get(col.int.ns) + 1/get(col.cont.ns) + yi^2/(2*(get(col.int.ns)+get(col.cont.ns)))))
 ```
 `r kable(dat_comp)`
 
-## Write the data to a file
+
+## This is our meta-analysis based on compiled data
 ```{r}
-write.csv(dat_comp, "compiled_data.csv")
+dat_MA <- rma(yi, vi, data = dat_comp)
+dat_MA
+forest(dat_MA)
 ```
 
-[^1]: Obviously you don't need to complete this step when working with real data
-[^2]: If exact p values are not availble, one possible approach is to use the reported p cut off for the statistic (e.g. p<0.05) would use the p value 0.05. This is very conservative but may be preferrable to excluding the study entirely
+
+
+## Write the data to a file
+```{r}
+write.csv(dat_comp, "compiled_data.csv", row.names = FALSE)
+```
+
+[^1]: If exact p values are not availble, one possible approach is to use the reported p cut off for the statistic (e.g. p<0.05) would use the p value 0.05. This is very conservative but may be preferrable to excluding the study entirely
 
 ## Packages used in this document
 ```{r include=FALSE}
