@@ -1,24 +1,63 @@
 ---
 title: "Verbose Meta-Analysis Example"
+bibliography: R-Pckgs.bib
+csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
 output:
   html_document: default
   pdf_document: default
   word_document: default
-always_allow_html: yes
-csl: https://raw.githubusercontent.com/citation-style-language/styles/master/apa.csl
-bibliography: R-Pckgs.bib
 nocite: |
   @*
+always_allow_html: yes
 ---
-## Setup details
-```{r}
+
+```{r echo=FALSE}
 Author <- "Your Name"
 Rev.Title <- "Review Title"
-filename.ES.Data<- "data.csv"
+filename.ES.Data<- "alt.csv"
 filename.PRISMA.Data<- "prisma.csv"
 X<- "Anxiety"
 Y <- "Exercise"
 Z <- "Waitlist Control"
+
+
+### Specify the columns containing the Study ID and means, SDs, and Ns for intervention and control within the file
+
+col.int.means     <- "m1"
+col.int.sds       <- "sd1"
+col.int.ns        <- "n1"
+col.cont.means    <- "m2"
+col.cont.sds      <- "sd2"
+col.cont.ns       <- "n2"
+col.study.id      <- "StudyID"
+
+
+### Specify the effect size measure
+
+## Options in this template are SMD (standarised mean differences) and MD (raw mean differences). 
+## In most cases SMD is most appropriate.
+
+measure <- "SMD"
+
+### Specify the model type. 
+## In most cases REML should be the default
+
+## Options in this template are 
+
+# method <- "FE" # Fixed effect meta-analysis
+# method <- "REML" # Default random effects meta-analysis
+# method <- "DL" #  DerSimonian-Laird estimator
+# method <- "HE" # Hedges estimator
+# method <- "HS" # Hunter-Schmidt estimator
+# method <- "SJ" # Sidik-Jonkman estimator
+# method <- "ML" # maximum-likelihood estimator
+# method <- "REML" # restricted maximum-likelihood estimator
+# method <- "EB" # empirical Bayes estimator
+# method <- "PM" # Paule-Mandel estimator
+# method <- "GENQ" # generalized Q-statistic estimator
+
+method <- "REML"
+
 
 ```
 
@@ -26,18 +65,17 @@ Z <- "Waitlist Control"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(metafor)
-library(DT)
 library(knitr)
 library(RCurl)
 library(dplyr)
 library(forestmodel)
 library(rmarkdown)
 library(DiagrammeR)
-library(DiagrammeRsvg)
-library(magrittr)
-library(svglite)
-library(rsvg)
-library(png)
+#library(DiagrammeRsvg)
+#library(magrittr)
+#library(svglite)
+#library(rsvg)
+#library(png)
 
 
 output<-default_output_format(knitr::current_input()) ## This will fail if run manually. Don't worry!
@@ -57,27 +95,23 @@ prisma.data <- read.csv(filename.PRISMA.Data)
 ```
 
 ```{r calculate_ES, include=FALSE}
-dat<-read.csv(filename.ES.Data) 
+dat <- read.csv(filename.ES.Data, stringsAsFactors = FALSE)
+  dat_ES <-
+    escalc(
+    measure = measure,
+    m1i = get(col.int.means),
+    sd1i = get(col.int.sds),  
+    n1i = get(col.int.ns),  
+    m2i = get(col.cont.means),
+    sd2i = get(col.cont.sds),  
+    n2i = get(col.cont.ns),  
+    data = dat
+    )
 
-if(!"vi" %in% colnames(dat))
-{
-  dat_ES <- escalc(measure="SMD", m1i=Intervention.Mean, sd1i=Intervention.SD, n1i=Intervention.N, m2i=Control.Mean,  sd2i=Control.SD, n2i=Control.N, data=dat)
-} else {
-  dat_ES<-dat
-  attrs<-NULL
-  attrs$measure<-"SMD"
-  attrs$ni<-dat$Intervention.N+dat$Control.N
-  attributes(dat_ES$yi) <- attrs
-}
-
-```
-
-```{r dat_es_html, eval=(output$name=="html_document"), echo=FALSE, warning=FALSE}
-datatable(dat_ES %>% select(-one_of(c("X", "Timestamp"))), rownames= FALSE)  %>% formatRound('yi', 3) %>% formatRound('vi', 3)
 ```
 
 ```{r conduct_MA, echo=FALSE}
-dat_MA<- rma(yi, vi, data=dat_ES, slab=Study.ID)
+dat_MA<- rma(yi, vi, data=dat_ES, slab=get(col.study.id))
 model<-tidy.rma(dat_MA)
 het.small<-glance.rma(dat_MA) %>% select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
 eggers<-regtest(dat_MA)
@@ -90,6 +124,7 @@ This file documents the analyses conducted for `r Author` (`r (format(Sys.Date()
 
 A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat_MA$method` estimator. The effect size is the standarised mean difference (hedges g).
 
+#Results
 ## Studies
 This review was reported according to the PRISMA statement. The flow of studies through the review is shown in the PRISMA Flowchart below (Figure 1). From the `r prisma.data$no_dupes` studies that underwent screening, a total of `r prisma.data$quantitative` were suitable for meta-analysis.
 
@@ -126,10 +161,10 @@ prisma(found = prisma.data$found,
         reasons = paste(prisma.data$reasons))
 ```
 
-## Meta-analysis results
+## Meta-analytic synthesis
 
 ```{r forest, echo=FALSE, warning=FALSE, fig.height=het.small$k*0.5, fig.cap="Figure 2. Forest Plot"}
-forest_rma(dat_MA, study_labels = dat_ES$Study.ID, format_options = list(colour  = "black", shape = 15, text_size = 3, banded = TRUE))
+forest_rma(dat_MA, study_labels = dat_MA$slab, format_options = list(colour  = "black", shape = 15, text_size = 3, banded = TRUE))
 ```
 
 A random effects meta-analysis was conducted (k=`r het.small$k`) to explore the difference in `r X` between the `r Y` group and the `r Z` group. As shown in Figure 2, the average difference in `r X` was g=`r round(model$b,2)` (p=`r round(model$pval,3)`, 95% CI [`r round(model$ci.lb, 2)`, `r round(model$ci.ub, 2)`]).`r ifelse(model$pval > 0.05, "[^1]", "")` The results of this analysis are summarised in the tables below.
