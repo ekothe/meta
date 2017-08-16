@@ -1,0 +1,146 @@
+---
+title: "Basic Meta-Analysis for Correlation Coefficients"
+nocite: |
+  @*
+output:
+  html_document:
+    code_folding: show
+  pdf_document: default
+  word_document: default
+bibliography: R-Pckgs.bib
+---
+
+## Setup details
+```{r}
+
+## Specify the file containing your data
+filename <- "corr_dat.csv"
+
+### Specify the columns containing the Study ID and means, SDs, and Ns for intervention and control within the file
+
+col.corr  <- "r"
+col.n     <- "n"
+col.study.id      <- "Study.ID"
+
+
+### Specify the effect size measure
+
+## Options in this template are ZCOR (Fisher's r-to-z transformed correlation
+## coefficient), COR (raw correlations), and UCOR (Raw correlations corrected
+## for negative bias). In most cases ZCOR is most appropriate.
+
+measure <- "ZCOR"
+
+### Specify the model type. 
+## In most cases REML should be the default
+
+## Options in this template are 
+
+# method <- "FE" # Fixed effect meta-analysis
+# method <- "REML" # Default random effects meta-analysis
+# method <- "DL" #  DerSimonian-Laird estimator
+# method <- "HE" # Hedges estimator
+# method <- "HS" # Hunter-Schmidt estimator
+# method <- "SJ" # Sidik-Jonkman estimator
+# method <- "ML" # maximum-likelihood estimator
+# method <- "REML" # restricted maximum-likelihood estimator
+# method <- "EB" # empirical Bayes estimator
+# method <- "PM" # Paule-Mandel estimator
+# method <- "GENQ" # generalized Q-statistic estimator
+
+method <- "REML"
+
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(metafor)
+library(DT)
+library(knitr)
+library(RCurl)
+library(dplyr)
+library(forestmodel)
+library(rmarkdown)
+
+## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
+eval(parse(text = (getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE))))
+
+# Set so that long lines in R will be wrapped:
+opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
+
+```
+
+```{r read_data}
+dat <- read.csv(filename, stringsAsFactors = FALSE)
+```
+
+## Caluclate effect sizes
+```{r calculate_ES}
+  dat_ES <-
+    escalc(
+    measure = measure,
+    ri = get(col.corr),
+    ni = get(col.n),  
+    data = dat
+    )
+```
+
+```{r dat_es_html, echo = FALSE, warning = FALSE}
+datatable(dat_ES %>% 
+            select(-one_of(c("X", "Timestamp"))), rownames = FALSE)  %>% 
+                formatRound('yi', 3) %>% 
+                  formatRound('vi', 3)
+```
+
+
+## Run meta-analysis
+```{r run_MA}
+dat_MA <- rma(yi, vi, data = dat_ES, slab = get(col.study.id), method=method)
+dat_MA
+```
+
+```{r convenience, echo=FALSE}
+##These are some convenience functions that help put things into tables for easier interpretation.
+
+model <- tidy.rma(dat_MA)
+
+het.small <- glance.rma(dat_MA) %>% 
+  select(one_of(c("k", "tau2", "se.tau2", "QE", "QEp", "I2")))
+
+```
+
+
+### Summary
+
+`r ifelse(dat_MA$method=="FE", "A fixed effect meta-analysis", "A random-effects meta-analysis")` (k = `r dat_MA$k`) was conducted `r ifelse(dat_MA$method=="FE","",paste("using the", dat_MA$method, "estimator"))`.
+
+
+```{r summary_table, echo=FALSE}
+kable(model, col.names=c("*r*", "se", "z", "*p*", "95% CI LB", "95% CI UB"), row.names=FALSE, digits = 3, caption="Effect Size")
+```
+
+
+```{r het_table, eval=dat_MA$method!="FE", echo=FALSE}
+kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")
+```
+
+## Plots
+###Forest plot
+```{r forest, warning = FALSE}
+forest(dat_MA, slab= attr(dat_MA$yi, "slab"))
+#, 
+          # study_labels = attr(dat_MA$yi, "slab"),
+          # format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
+```
+
+###Funnel plot
+```{r funnel}
+funnel(dat_MA, back="white")
+```
+
+## Packages used in this document
+```{r include=FALSE}
+citPkgs <- names(sessionInfo()$otherPkgs)
+write_bib(citPkgs, file="R-Pckgs.bib")
+```
