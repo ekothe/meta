@@ -3,7 +3,7 @@
 ## Specify the file containing your data
 filename <- "corr_dat.csv"
 
-### Specify the columns containing the Study ID and means, SDs, and Ns for intervention and control within the file
+### Specify the columns containing the Study ID, rs and Ns within the file
 
 col.corr  <- "r"
 col.n     <- "n"
@@ -94,7 +94,9 @@ kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digit
 
 ## ----forest, warning = FALSE---------------------------------------------
 forest(dat_MA, slab= attr(dat_MA$yi, "slab"))
-
+#, 
+          # study_labels = attr(dat_MA$yi, "slab"),
+          # format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
 
 ## ----funnel--------------------------------------------------------------
 funnel(dat_MA, back="white")
