@@ -18,15 +18,13 @@ library(DT)
 library(knitr)
 library(RCurl)
 library(dplyr)
-library(forestmodel)
 library(rmarkdown)
 library(kableExtra)
 
 output <- default_output_format(knitr::current_input()) ## This will fail if run manually. Don't worry!
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
-script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
-eval(parse(text = script))
+source("metafor_tidiers.R")
 
 # Set so that long lines in R will be wrapped:
 opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
@@ -105,9 +103,7 @@ A random-effects meta-analysis (k = `r dat_MA$k`) was conducted using the `r dat
 ## Plots
 ###Forest plot
 ```{r forest, warning = FALSE, fig.height = (het.small$k*0.5)}
-forest_rma(dat_MA, 
-           study_labels = attr(dat_MA$yi, "slab"),
-           format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
+forest(dat_MA)
 ```
 
 ###Funnel plot

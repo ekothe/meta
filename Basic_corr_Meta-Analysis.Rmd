@@ -60,11 +60,11 @@ library(DT)
 library(knitr)
 library(RCurl)
 library(dplyr)
-library(forestmodel)
+
 library(rmarkdown)
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
-eval(parse(text = (getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE))))
+source("metafor_tidiers.R")
 
 # Set so that long lines in R will be wrapped:
 opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
@@ -129,9 +129,7 @@ kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digit
 ###Forest plot
 ```{r forest, warning = FALSE}
 forest(dat_MA, slab= attr(dat_MA$yi, "slab"))
-#, 
-          # study_labels = attr(dat_MA$yi, "slab"),
-          # format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
+
 ```
 
 ###Funnel plot

@@ -68,7 +68,6 @@ library(metafor)
 library(knitr)
 library(RCurl)
 library(dplyr)
-library(forestmodel)
 library(rmarkdown)
 library(DiagrammeR)
 #library(DiagrammeRsvg)
@@ -82,8 +81,7 @@ output<-default_output_format(knitr::current_input()) ## This will fail if run m
 
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
-script <- getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE)
-eval(parse(text = script))
+source("metafor_tidiers.R")
 
 ## This opens the PRISMA function adapted from the prismastatement package
 source("prisma.R")
@@ -164,7 +162,7 @@ prisma(found = prisma.data$found,
 ## Meta-analytic synthesis
 
 ```{r forest, echo=FALSE, warning=FALSE, fig.height=het.small$k*0.5, fig.cap="Figure 2. Forest Plot"}
-forest_rma(dat_MA, study_labels = dat_MA$slab, format_options = list(colour  = "black", shape = 15, text_size = 3, banded = TRUE))
+forest(dat_MA)
 ```
 
 A random effects meta-analysis was conducted (k=`r het.small$k`) to explore the difference in `r X` between the `r Y` group and the `r Z` group. As shown in Figure 2, the average difference in `r X` was g=`r round(model$b,2)` (p=`r round(model$pval,3)`, 95% CI [`r round(model$ci.lb, 2)`, `r round(model$ci.ub, 2)`]).`r ifelse(model$pval > 0.05, "[^1]", "")` The results of this analysis are summarised in the tables below.
