@@ -1,3 +1,5 @@
+## ------------------------------------------------------------------------
+
 ## Specify the file containing your data
 filename <- "data.csv"
 
@@ -40,18 +42,19 @@ method <- "REML"
 
 
 ## ----setup, include=FALSE------------------------------------------------
+knitr::opts_chunk$set(echo = TRUE)
 library(metafor)
 library(DT)
 library(knitr)
 library(RCurl)
 library(dplyr)
-library(forestmodel)
 library(rmarkdown)
 
 ## These lines of code download and run the metafor_tidiers functions that implement broom type tidy data functions for rma objects
-eval(parse(text = (getURL("https://raw.githubusercontent.com/talgalili/broom/master/R/metafor_tidiers.R", ssl.verifypeer = FALSE))))
+source("metafor_tidiers.R")
 
-
+# Set so that long lines in R will be wrapped:
+opts_chunk$set(tidy.opts = list(width.cutoff = 80), tidy = TRUE)
 
 
 ## ----read_data-----------------------------------------------------------
@@ -70,9 +73,11 @@ dat <- read.csv(filename, stringsAsFactors = FALSE)
     data = dat
     )
 
-## ----dat_es--------------------------------------------------------------
-dat_ES
-
+## ----dat_es_html, echo = FALSE, warning = FALSE--------------------------
+datatable(dat_ES %>% 
+            select(-one_of(c("X", "Timestamp"))), rownames = FALSE)  %>% 
+                formatRound('yi', 3) %>% 
+                  formatRound('vi', 3)
 
 ## ----run_MA--------------------------------------------------------------
 dat_MA <- rma(yi, vi, data = dat_ES, slab = get(col.study.id), method=method)
@@ -88,13 +93,18 @@ het.small <- glance.rma(dat_MA) %>%
 
 
 ## ----summary_table, echo=FALSE-------------------------------------------
-model
+kable(model, col.names=c("*g*", "se", "z", "*p*", "95% CI LB", "95% CI UB"), row.names=FALSE, digits = 3, caption="Effect Size")
+
 ## ----het_table, eval=dat_MA$method!="FE", echo=FALSE---------------------
-het.small
+kable(het.small, col.names=c("k", "$\\tau$^2^", "se", "Q", "*p*", "I^2^"), digits = 3, caption="Heterogeneity")
+
 ## ----forest, warning = FALSE, fig.height = (het.small$k*0.5)-------------
-forest_rma(dat_MA, 
-           study_labels = attr(dat_MA$yi, "slab"),
-           format_options = list(colour  = "black", shape = 15, text_size = 4, banded = TRUE))
+forest(dat_MA)
 
 ## ----funnel--------------------------------------------------------------
 funnel(dat_MA, back="white")
+
+## ----include=FALSE-------------------------------------------------------
+citPkgs <- names(sessionInfo()$otherPkgs)
+write_bib(citPkgs, file="R-Pckgs.bib")
+
